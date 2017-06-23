@@ -49,100 +49,15 @@ namespace Lex.Demo.ConsoleLang
 
         private static readonly List<TokenMapping> _mappings = new List<TokenMapping>()
         {
-            new TokenMapping(l => char.IsDigit(l.CurrentChar) || (l.CurrentChar == '.' && char.IsDigit(l.Peek())), GetNumber),
-            new TokenMapping(l => char.IsLetter(l.CurrentChar) || (l.CurrentChar == '_' && char.IsLetter(l.Peek())), GetIdentifier),
-            new TokenMapping(l => l.CurrentChar == '"', GetString), new TokenMapping("+", Plus), new TokenMapping("-", Minus),
+            new TokenMapping(l => char.IsDigit(l.CurrentChar) || (l.CurrentChar == '.' && char.IsDigit(l.Peek())), l => l.GetNumber(Integer, Float)),
+            new TokenMapping(l => char.IsLetter(l.CurrentChar) || (l.CurrentChar == '_' && char.IsLetter(l.Peek())), l => l.GetIdentifier(Identifier)),
+            new TokenMapping("\"", l => l.GetString(String)), new TokenMapping("+", Plus), new TokenMapping("-", Minus),
             new TokenMapping("(", LParen), new TokenMapping(")", RParen), new TokenMapping("{", LBlock), new TokenMapping("}", RBlock),
             new TokenMapping(",", Comma), new TokenMapping("typeof", TypeOf), new TokenMapping("func", Func), new TokenMapping(";", Semi),
             new TokenMapping("return", Return), new TokenMapping("print", Print), new TokenMapping("if", Branch), new TokenMapping("else", Else),
             new TokenMapping("loop", Loop), new TokenMapping("*", Multiply), new TokenMapping("/", Divide), new TokenMapping("=", Assign),
             new TokenMapping("var", Variable)
         };
-
-        private static Token GetNumber(Lexer lexer)
-        {
-            Func<string> getNumberString = () =>
-            {
-                var result = string.Empty;
-                while (lexer.CurrentChar != char.MinValue && (char.IsDigit(lexer.CurrentChar) || lexer.CurrentChar == '_'))
-                {
-                    if (lexer.CurrentChar == '_')
-                    {
-                        lexer.Advance();
-                        continue;
-                    }
-
-                    result += lexer.CurrentChar;
-                    lexer.Advance();
-                }
-                return result;
-            };
-
-            var resultString = getNumberString();
-
-            if (lexer.CurrentChar == '.')
-            {
-                resultString += lexer.CurrentChar;
-                lexer.Advance();
-
-                resultString += getNumberString();
-
-                if ("fF".Contains(lexer.CurrentChar))
-                    lexer.Advance();
-
-                return new Token(Float, float.Parse(resultString));
-            }
-
-            if ("fF".Contains(lexer.CurrentChar))
-            {
-                lexer.Advance();
-                return new Token(Float, float.Parse(resultString));
-            }
-
-            return new Token(Integer, int.Parse(resultString));
-        }
-
-        private static Token GetString(Lexer lexer)
-        {
-            if (lexer.CurrentChar != '"')
-            {
-                lexer.Log(new Exception("Malformed string? Strings must begin with a double-quote '\"'"));
-            }
-            lexer.Advance();
-            var result = string.Empty;
-            while (lexer.CurrentChar != char.MinValue && lexer.CurrentChar != '"')
-            {
-                if (lexer.CurrentChar == '\\' && lexer.Peek() == '"')
-                {
-                    lexer.Advance(2);
-                    result += "\"";
-                    continue;
-                }
-
-                result += lexer.CurrentChar;
-                lexer.Advance();
-            }
-            lexer.Advance();
-            return new Token(String, result);
-        }
-
-        private static Token GetIdentifier(Lexer lexer)
-        {
-            var result = string.Empty;
-            if (lexer.CurrentChar == '@')
-            {
-                result += lexer.CurrentChar;
-                lexer.Advance();
-            }
-            while (lexer.CurrentChar != char.MinValue && (char.IsLetterOrDigit(lexer.CurrentChar) || lexer.CurrentChar == '_'))
-            {
-                result += lexer.CurrentChar;
-                lexer.Advance();
-            }
-            if (result.StartsWith("@"))
-                return new Token(Identifier, result);
-            return new Token(Identifier, result);
-        }
 
         #endregion
 

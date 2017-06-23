@@ -17,6 +17,48 @@ namespace Lex
             public string LineCommentStart { get; set; }
             public string BlockCommentStart { get; set; }
             public string BlockCommentEnd { get; set; }
+
+            public List<NumericType> NumericTypes { get; set; }
+
+            public class NumericType
+            {
+                public string Keyword { get; set; }
+                public int TokenTypeId { get; set; }
+                public string Suffix { get; set; }
+                public Type Type { get; set; }
+            }
+
+            public static LexerConfig Default(List<TokenMapping> mappings) => new LexerConfig
+            {
+                LineCommentStart = "//",
+                BlockCommentStart = "/*",
+                BlockCommentEnd = "*/",
+                TokenMappings = mappings,
+                NumericTypes = new List<NumericType>
+                {
+                    new NumericType
+                    {
+                        Keyword = "int",
+                        TokenTypeId = 50000,
+                        Suffix = string.Empty,
+                        Type = typeof(int)
+                    },
+                    new NumericType
+                    {
+                        Keyword = "float",
+                        TokenTypeId = 50001,
+                        Suffix = "Ff",
+                        Type = typeof(float)
+                    },
+                    new NumericType
+                    {
+                        Keyword = "money",
+                        TokenTypeId = 50002,
+                        Suffix = "$",
+                        Type = typeof(decimal)
+                    }
+                }
+            };
         }
 
         #endregion
@@ -45,13 +87,7 @@ namespace Lex
             _position = 0;
             _currentChar = _text[0];
             _errors = new List<Exception>();
-            _lexerConfig = new LexerConfig
-            {
-                LineCommentStart = "//",
-                BlockCommentStart = "/*",
-                BlockCommentEnd = "*/",
-                TokenMappings = mappings
-            };
+            _lexerConfig = LexerConfig.Default(mappings);
             PrepareTokenMappings();
         }
 
@@ -221,6 +257,86 @@ namespace Lex
                 token = Next();
             }
             return tokens.ToArray();
+        }
+
+        public Token GetString(int stringTypeId)
+        {
+            // Skip the initial string character
+            Advance();
+            var result = string.Empty;
+            while (CurrentChar != char.MinValue && CurrentChar != '"')
+            {
+                if (CurrentChar == '\\' && Peek() == '"')
+                {
+                    Advance(2);
+                    result += "\"";
+                    continue;
+                }
+
+                result += CurrentChar;
+                Advance();
+            }
+            Advance();
+            return new Token(stringTypeId, result);
+        }
+
+        public Token GetIdentifier(int identifierTypeId)
+        {
+            var result = string.Empty;
+            if (CurrentChar == '@')
+            {
+                result += CurrentChar;
+                Advance();
+            }
+            while (CurrentChar != char.MinValue && (char.IsLetterOrDigit(CurrentChar) || CurrentChar == '_'))
+            {
+                result += CurrentChar;
+                Advance();
+            }
+            return new Token(identifierTypeId, result);
+        }
+
+        public Token GetNumber(int integerTokenId, int floatTokenId)
+        {
+            Func<string> getNumberString = () =>
+            {
+                var result = string.Empty;
+                while (CurrentChar != char.MinValue && (char.IsDigit(CurrentChar) || CurrentChar == '_'))
+                {
+                    if (CurrentChar == '_')
+                    {
+                        Advance();
+                        continue;
+                    }
+
+                    result += CurrentChar;
+                    Advance();
+                }
+                return result;
+            };
+
+            var resultString = getNumberString();
+
+            if (CurrentChar == '.')
+            {
+                resultString += CurrentChar;
+                Advance();
+
+                resultString += getNumberString();
+
+                if ("Ff".Contains(CurrentChar))
+                    Advance();
+
+                return new Token(floatTokenId, float.Parse(resultString));
+            }
+
+            if ("Ff".Contains(CurrentChar))
+            {
+                Advance();
+                return new Token(floatTokenId, float.Parse(resultString));
+            }
+
+            return new Token(integerTokenId, int.Parse(resultString));
         }
 
         #endregion
