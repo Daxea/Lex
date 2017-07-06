@@ -24,7 +24,7 @@ or a function that takes a Lexer instance as an argument and returns a Token.
 
 As you might see in the demo ConsoleLang, the Lexer has a few handy helpers for tokenizing numbers, identifiers, and strings.
 These are very basic, but can be replaced with custom methods that handle more numeric types, or allow for string interpolation,
-or whatever you else you may want to do.
+or whatever else you may want to do.
 
 # Lex.Parsing
 
